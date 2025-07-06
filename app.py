@@ -111,7 +111,7 @@ def generate_report_image(report_data):
         ax.set_facecolor(bg_color)
 
         # Title with custom styling
-        title = "KIN99OLD COPYTRADING REPORT"
+        title = "Kin99old_copytrading Report"
         plt.text(0.5, 0.95, title,
                 fontsize=24,
                 fontweight='bold',
@@ -121,7 +121,7 @@ def generate_report_image(report_data):
                 transform=ax.transAxes)
 
         # Watermark
-        watermark_text = "KIN99OLD"
+        watermark_text = "Kin99old_copytrading Report"
         plt.text(0.5, 0.5, watermark_text,
                 fontsize=120,
                 color='#ffffff10',  # Very transparent white
@@ -164,7 +164,7 @@ def generate_report_image(report_data):
             "",
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            "© KIN99OLD COPYTRADING"
+            "© Kin99old_copytrading Report"
         ])
 
         # Add content to plot
@@ -226,7 +226,7 @@ def upload_file():
         
         # Generate and send image
         img_buffer = generate_report_image(report_data)
-        caption = "KIN99OLD COPYTRADING REPORT"
+        caption = "https://t.me/Kin99old/768"
         send_telegram_photo(img_buffer, caption)
         
         return "✅ Report sent successfully", 200
