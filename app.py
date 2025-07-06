@@ -35,16 +35,18 @@ def parse_html_content(html_content):
         if period_match:
             period = f"{period_match.group(1)} hours"
 
-        # Calculate total pips from all trades
-        total_pips = 0
+        # Initialize variables for pips calculation
+        total_pips = 0.0
         trades = []
+        
+        # Extract trades and convert profit to pips
         trades_matches = re.finditer(
-            r'Order\s*#(\d+):\s*(BUY|SELL)\s+(\w+)\s*\|\s*Profit:\s*(-?\d+)\s*pips',
+            r'Order\s*#(\d+):\s*(BUY|SELL)\s+(\w+)\s*\|\s*Profit:\s*(-?[\d.]+)\s*pips',
             clean_text
         )
         
         for match in trades_matches:
-            pips = int(match.group(4))
+            pips = float(match.group(4))
             total_pips += pips
             trades.append({
                 'order_id': match.group(1),
@@ -53,17 +55,36 @@ def parse_html_content(html_content):
                 'profit_pips': pips
             })
 
-        metrics = {
+        # Extract win/loss counts
+        winning_trades = int(re.search(r'Winning Trades:\s*(\d+)', clean_text).group(1))
+        losing_trades = int(re.search(r'Losing Trades:\s*(\d+)', clean_text).group(1))
+        total_trades = winning_trades + losing_trades
+        win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
+
+        # Extract net profit (handle both integer and decimal values)
+        net_profit_match = re.search(r'Net Profit:\s*(-?[\d.]+)\s*pips', clean_text)
+        if net_profit_match:
+            total_pips = float(net_profit_match.group(1))
+
+        logger.info(f"Parsed data: {{
+            'period': '{period}',
+            'winning_trades': {winning_trades},
+            'losing_trades': {losing_trades},
+            'total_trades': {total_trades},
+            'win_rate': {win_rate},
+            'net_pips': {total_pips},
+            'trades_count': {len(trades)}
+        }}")
+
+        return {
             'period': period,
-            'winning_trades': int(re.search(r'Winning Trades:\s*(\d+)', clean_text).group(1)),
-            'losing_trades': int(re.search(r'Losing Trades:\s*(\d+)', clean_text).group(1)),
-            'total_trades': int(re.search(r'Total Trades:\s*(\d+)', clean_text).group(1)),
-            'win_rate': float(re.search(r'Win Rate:\s*([\d.]+)%', clean_text).group(1)),
+            'winning_trades': winning_trades,
+            'losing_trades': losing_trades,
+            'total_trades': total_trades,
+            'win_rate': win_rate,
             'net_pips': total_pips,
             'trades': trades
         }
-
-        return metrics
         
     except Exception as e:
         logger.error(f"Error parsing HTML: {str(e)}")
@@ -118,7 +139,7 @@ def generate_report_image(report_data):
             f"Winning Trades: {report_data['winning_trades']}",
             f"Losing Trades: {report_data['losing_trades']}",
             f"Win Rate: {report_data['win_rate']:.1f}%",
-            f"Net Profit: {report_data['net_pips']:+,.0f} pips",
+            f"Net Profit: {report_data['net_pips']:+,.1f} pips",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             "TRADES DETAILS:",
@@ -132,7 +153,7 @@ def generate_report_image(report_data):
                 profit_color = accent_color if trade['profit_pips'] >= 0 else '#f72585'  # Pink for losses
                 content.append(
                     f"#{trade['order_id']} {trade_type} {trade['symbol']} | "
-                    f"Profit: {trade['profit_pips']:+,.0f} pips"
+                    f"Profit: {trade['profit_pips']:+,.1f} pips"
                 )
         else:
             content.append("No trading details available in the report")
@@ -155,7 +176,7 @@ def generate_report_image(report_data):
 
         # Highlight important metrics
         important_metrics = [
-            (0.8, 0.7, f"Net Profit: {report_data['net_pips']:+,.0f} pips", 20),
+            (0.8, 0.7, f"Net Profit: {report_data['net_pips']:+,.1f} pips", 20),
             (0.8, 0.65, f"Win Rate: {report_data['win_rate']:.1f}%", 20)
         ]
         
