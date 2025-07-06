@@ -43,10 +43,10 @@ def parse_html_content(html_content):
             'net_profit': float(re.search(r'Net Profit:\s*(-?\$?[\d,.]+)', clean_text).group(1).replace('$', '').replace(',', ''))
         }
 
-        # Extract trades
+        # Extract trades (now looking for pips instead of dollars)
         trades = []
         trades_matches = re.finditer(
-            r'Order\s*#(\d+):\s*(BUY|SELL)\s+(\w+)\s*\|\s*Profit:\s*(-?\$?[\d,.]+)',
+            r'Order\s*#(\d+):\s*(BUY|SELL)\s+(\w+)\s*\|\s*Profit:\s*(-?\d+)\s*pips',
             clean_text
         )
         
@@ -55,7 +55,7 @@ def parse_html_content(html_content):
                 'order_id': match.group(1),
                 'type': match.group(2),
                 'symbol': match.group(3),
-                'profit': float(match.group(4).replace('$', '').replace(',', ''))
+                'profit_pips': int(match.group(4))
             })
 
         return {**metrics, 'trades': trades}
@@ -65,42 +65,66 @@ def parse_html_content(html_content):
         raise
 
 def generate_report_image(report_data):
-    """Generate clean, minimalist report image"""
+    """Generate clean, minimalist report image with improved English formatting"""
     try:
         # Create figure with specific dimensions
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 8))  # Increased height for better spacing
         ax = plt.gca()
         ax.axis('off')
 
         # Set background color
         fig = plt.gcf()
-        fig.patch.set_facecolor('#FFFFFF')
-        ax.set_facecolor('#FFFFFF')
+        fig.patch.set_facecolor('#f8f9fa')  # Light gray background
+        ax.set_facecolor('#f8f9fa')
 
-        # Report content
+        # Title with stars
+        title = "****** Kin99old_copytrading Report ******"
+        
+        # Report content with improved formatting
         content = [
-            f"Reporting Period: {report_data['period']}",
-            f"Total Trades: {report_data['total_trades']}",
-            f"Winning Trades: {report_data['winning_trades']} | Losing Trades: {report_data['losing_trades']}",
-            f"Win Rate: {report_data['win_rate']:.1f}%",
-            f"Net Profit: ${report_data['net_profit']:,.2f}",
+            f"📅 Reporting Period: {report_data['period']}",
             "",
-            "Generated on " + datetime.now().strftime('%Y-%m-%d %H:%M')
+            f"📊 Total Trades: {report_data['total_trades']}",
+            f"✅ Winning Trades: {report_data['winning_trades']}",
+            f"❌ Losing Trades: {report_data['losing_trades']}",
+            f"🎯 Win Rate: {report_data['win_rate']:.1f}%",
+            f"💰 Net Profit: {report_data['net_profit']:,.0f} pips",
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            "📝 Trades Details:",
+            ""
         ]
 
         # Add trades details if they exist
         if report_data['trades']:
-            content.insert(5, "")  # Add empty line before trades
-            content.insert(6, "Trades Details:")
             for trade in report_data['trades']:
+                profit_sign = "+" if trade['profit_pips'] >= 0 else ""
                 content.append(
                     f"#{trade['order_id']}: {trade['type']} {trade['symbol']} | "
-                    f"Profit: ${trade['profit']:+,.2f}"
+                    f"Profit: {profit_sign}{trade['profit_pips']} pips"
                 )
+        else:
+            content.append("No trades details available")
+            
+        # Add footer
+        content.extend([
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━",
+            f"🔄 Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            "📊 @Kin99old_copytrading"
+        ])
 
-        # Add text to plot with specific styling
-        plt.text(0.05, 0.95, '\n'.join(content),
-                fontsize=12,
+        # Add title to plot
+        plt.text(0.5, 0.97, title,
+                fontsize=14,
+                fontweight='bold',
+                fontfamily='sans-serif',
+                horizontalalignment='center',
+                transform=ax.transAxes)
+
+        # Add content to plot with specific styling
+        plt.text(0.05, 0.85, '\n'.join(content),
+                fontsize=11,
                 fontfamily='sans-serif',
                 verticalalignment='top',
                 linespacing=1.8)
@@ -141,7 +165,7 @@ def upload_file():
         
         # Generate and send image
         img_buffer = generate_report_image(report_data)
-        caption = f"📊 Trading Report - {datetime.now().strftime('%Y-%m-%d')}"
+        caption = "****** Kin99old_copytrading Report ******"
         send_telegram_photo(img_buffer, caption)
         
         return "✅ Report sent successfully", 200
