@@ -66,15 +66,16 @@ def parse_html_content(html_content):
         if net_profit_match:
             total_pips = float(net_profit_match.group(1))
 
-        logger.info(f"Parsed data: {{
-            'period': '{period}',
-            'winning_trades': {winning_trades},
-            'losing_trades': {losing_trades},
-            'total_trades': {total_trades},
-            'win_rate': {win_rate},
-            'net_pips': {total_pips},
-            'trades_count': {len(trades)}
-        }}")
+        # Log parsed data in a correct way
+        logger.info("Parsed data: {\n" +
+                   f"  'period': '{period}',\n" +
+                   f"  'winning_trades': {winning_trades},\n" +
+                   f"  'losing_trades': {losing_trades},\n" +
+                   f"  'total_trades': {total_trades},\n" +
+                   f"  'win_rate': {win_rate},\n" +
+                   f"  'net_pips': {total_pips},\n" +
+                   f"  'trades_count': {len(trades)}\n" +
+                   "}")
 
         return {
             'period': period,
