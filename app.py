@@ -66,7 +66,6 @@ def parse_html_content(html_content):
         if net_profit_match:
             total_pips = float(net_profit_match.group(1))
 
-        # Log parsed data in a correct way
         logger.info("Parsed data: {\n" +
                    f"  'period': '{period}',\n" +
                    f"  'winning_trades': {winning_trades},\n" +
@@ -92,10 +91,10 @@ def parse_html_content(html_content):
         raise
 
 def generate_report_image(report_data):
-    """Generate professional report image with custom design"""
+    """Generate professional report image without trades details"""
     try:
-        # Create figure with larger dimensions
-        plt.figure(figsize=(12, 10))
+        # Create figure with adjusted dimensions
+        plt.figure(figsize=(12, 8))  # Reduced height since we removed trades details
         ax = plt.gca()
         ax.axis('off')
 
@@ -132,7 +131,7 @@ def generate_report_image(report_data):
                 rotation=30,
                 transform=ax.transAxes)
 
-        # Report content with larger fonts
+        # Report content (without trades details)
         content = [
             f"Reporting Period: {report_data['period']}",
             "",
@@ -143,42 +142,22 @@ def generate_report_image(report_data):
             f"Net Profit: {report_data['net_pips']:+,.1f} pips",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-            "TRADES DETAILS:",
-            ""
-        ]
-
-        # Add trades details
-        if report_data['trades']:
-            for trade in report_data['trades']:
-                trade_type = "BUY" if trade['type'].upper() == "BUY" else "SELL"
-                profit_color = accent_color if trade['profit_pips'] >= 0 else '#f72585'  # Pink for losses
-                content.append(
-                    f"#{trade['order_id']} {trade_type} {trade['symbol']} | "
-                    f"Profit: {trade['profit_pips']:+,.1f} pips"
-                )
-        else:
-            content.append("No trading details available in the report")
-
-        # Footer
-        content.extend([
-            "",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}",
             "© Kin99old_copytrading Report"
-        ])
+        ]
 
-        # Add content to plot
-        plt.text(0.1, 0.8, '\n'.join(content),
+        # Add content to plot (adjusted vertical position)
+        plt.text(0.1, 0.85, '\n'.join(content),
                 fontsize=16,
                 color=text_color,
                 fontfamily='sans-serif',
                 verticalalignment='top',
                 linespacing=1.8)
 
-        # Highlight important metrics
+        # Highlight important metrics (adjusted positions)
         important_metrics = [
-            (0.8, 0.7, f"Net Profit: {report_data['net_pips']:+,.1f} pips", 20),
-            (0.8, 0.65, f"Win Rate: {report_data['win_rate']:.1f}%", 20)
+            (0.8, 0.75, f"Net Profit: {report_data['net_pips']:+,.1f} pips", 20),
+            (0.8, 0.7, f"Win Rate: {report_data['win_rate']:.1f}%", 20)
         ]
         
         for x, y, text, size in important_metrics:
@@ -196,7 +175,7 @@ def generate_report_image(report_data):
         buf.seek(0)
         plt.close()
         
-        logger.info("Professional report image generated")
+        logger.info("Professional report image generated (without trades details)")
         return buf
 
     except Exception as e:
