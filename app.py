@@ -121,7 +121,7 @@ def generate_report_image(report_data):
                 transform=ax.transAxes)
 
         # Watermark
-        watermark_text = "Kin99old_copytrading Report"
+        watermark_text = "@Kin9support"
         plt.text(0.5, 0.5, watermark_text,
                 fontsize=120,
                 color='#ffffff10',  # Very transparent white
