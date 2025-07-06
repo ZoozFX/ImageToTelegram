@@ -6,6 +6,7 @@ import requests
 from datetime import datetime
 import logging
 import re
+import numpy as np
 
 app = Flask(__name__)
 
@@ -28,22 +29,14 @@ def parse_html_content(html_content):
         # Debug log
         logger.info(f"Cleaned content: {clean_text[:200]}...")
 
-        # Extract metrics using robust pattern matching
+        # Extract metrics
         period = "1 hour"  # Default value
         period_match = re.search(r'Daily Report \((\d+) hours?\)', clean_text)
         if period_match:
-            period = f"{period_match.group(1)} hour{'s' if int(period_match.group(1)) > 1 else ''}"
+            period = f"{period_match.group(1)} hours"
 
-        metrics = {
-            'period': period,
-            'winning_trades': int(re.search(r'Winning Trades:\s*(\d+)', clean_text).group(1)),
-            'losing_trades': int(re.search(r'Losing Trades:\s*(\d+)', clean_text).group(1)),
-            'total_trades': int(re.search(r'Total Trades:\s*(\d+)', clean_text).group(1)),
-            'win_rate': float(re.search(r'Win Rate:\s*([\d.]+)%', clean_text).group(1)),
-            'net_profit': float(re.search(r'Net Profit:\s*(-?\$?[\d,.]+)', clean_text).group(1).replace('$', '').replace(',', ''))
-        }
-
-        # Extract trades (now looking for pips instead of dollars)
+        # Calculate total pips from all trades
+        total_pips = 0
         trades = []
         trades_matches = re.finditer(
             r'Order\s*#(\d+):\s*(BUY|SELL)\s+(\w+)\s*\|\s*Profit:\s*(-?\d+)\s*pips',
@@ -51,91 +44,137 @@ def parse_html_content(html_content):
         )
         
         for match in trades_matches:
+            pips = int(match.group(4))
+            total_pips += pips
             trades.append({
                 'order_id': match.group(1),
                 'type': match.group(2),
                 'symbol': match.group(3),
-                'profit_pips': int(match.group(4))
+                'profit_pips': pips
             })
 
-        return {**metrics, 'trades': trades}
+        metrics = {
+            'period': period,
+            'winning_trades': int(re.search(r'Winning Trades:\s*(\d+)', clean_text).group(1)),
+            'losing_trades': int(re.search(r'Losing Trades:\s*(\d+)', clean_text).group(1)),
+            'total_trades': int(re.search(r'Total Trades:\s*(\d+)', clean_text).group(1)),
+            'win_rate': float(re.search(r'Win Rate:\s*([\d.]+)%', clean_text).group(1)),
+            'net_pips': total_pips,
+            'trades': trades
+        }
+
+        return metrics
         
     except Exception as e:
         logger.error(f"Error parsing HTML: {str(e)}")
         raise
 
 def generate_report_image(report_data):
-    """Generate clean, minimalist report image with improved English formatting"""
+    """Generate professional report image with custom design"""
     try:
-        # Create figure with specific dimensions
-        plt.figure(figsize=(10, 8))  # Increased height for better spacing
+        # Create figure with larger dimensions
+        plt.figure(figsize=(12, 10))
         ax = plt.gca()
         ax.axis('off')
 
+        # Custom color scheme
+        bg_color = '#1a1a2e'  # Dark blue background
+        text_color = '#e6e6e6'  # Light gray text
+        accent_color = '#4cc9f0'  # Bright blue for accents
+        divider_color = '#4a4e69'  # Medium gray for dividers
+
         # Set background color
         fig = plt.gcf()
-        fig.patch.set_facecolor('#f8f9fa')  # Light gray background
-        ax.set_facecolor('#f8f9fa')
+        fig.patch.set_facecolor(bg_color)
+        ax.set_facecolor(bg_color)
 
-        # Title with stars
-        title = "****** Kin99old_copytrading Report ******"
-        
-        # Report content with improved formatting
-        content = [
-            f"📅 Reporting Period: {report_data['period']}",
-            "",
-            f"📊 Total Trades: {report_data['total_trades']}",
-            f"✅ Winning Trades: {report_data['winning_trades']}",
-            f"❌ Losing Trades: {report_data['losing_trades']}",
-            f"🎯 Win Rate: {report_data['win_rate']:.1f}%",
-            f"💰 Net Profit: {report_data['net_profit']:,.0f} pips",
-            "",
-            "━━━━━━━━━━━━━━━━━━━━━━",
-            "📝 Trades Details:",
-            ""
-        ]
-
-        # Add trades details if they exist
-        if report_data['trades']:
-            for trade in report_data['trades']:
-                profit_sign = "+" if trade['profit_pips'] >= 0 else ""
-                content.append(
-                    f"#{trade['order_id']}: {trade['type']} {trade['symbol']} | "
-                    f"Profit: {profit_sign}{trade['profit_pips']} pips"
-                )
-        else:
-            content.append("No trades details available")
-            
-        # Add footer
-        content.extend([
-            "",
-            "━━━━━━━━━━━━━━━━━━━━━━",
-            f"🔄 Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            "📊 @Kin99old_copytrading"
-        ])
-
-        # Add title to plot
-        plt.text(0.5, 0.97, title,
-                fontsize=14,
+        # Title with custom styling
+        title = "KIN99OLD COPYTRADING REPORT"
+        plt.text(0.5, 0.95, title,
+                fontsize=24,
                 fontweight='bold',
+                color=accent_color,
                 fontfamily='sans-serif',
                 horizontalalignment='center',
                 transform=ax.transAxes)
 
-        # Add content to plot with specific styling
-        plt.text(0.05, 0.85, '\n'.join(content),
-                fontsize=11,
+        # Watermark
+        watermark_text = "KIN99OLD"
+        plt.text(0.5, 0.5, watermark_text,
+                fontsize=120,
+                color='#ffffff10',  # Very transparent white
+                fontweight='bold',
+                fontfamily='sans-serif',
+                horizontalalignment='center',
+                verticalalignment='center',
+                rotation=30,
+                transform=ax.transAxes)
+
+        # Report content with larger fonts
+        content = [
+            f"Reporting Period: {report_data['period']}",
+            "",
+            f"Total Trades: {report_data['total_trades']}",
+            f"Winning Trades: {report_data['winning_trades']}",
+            f"Losing Trades: {report_data['losing_trades']}",
+            f"Win Rate: {report_data['win_rate']:.1f}%",
+            f"Net Profit: {report_data['net_pips']:+,.0f} pips",
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            "TRADES DETAILS:",
+            ""
+        ]
+
+        # Add trades details
+        if report_data['trades']:
+            for trade in report_data['trades']:
+                trade_type = "BUY" if trade['type'].upper() == "BUY" else "SELL"
+                profit_color = accent_color if trade['profit_pips'] >= 0 else '#f72585'  # Pink for losses
+                content.append(
+                    f"#{trade['order_id']} {trade_type} {trade['symbol']} | "
+                    f"Profit: {trade['profit_pips']:+,.0f} pips"
+                )
+        else:
+            content.append("No trading details available in the report")
+
+        # Footer
+        content.extend([
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            "© KIN99OLD COPYTRADING"
+        ])
+
+        # Add content to plot
+        plt.text(0.1, 0.8, '\n'.join(content),
+                fontsize=16,
+                color=text_color,
                 fontfamily='sans-serif',
                 verticalalignment='top',
                 linespacing=1.8)
 
+        # Highlight important metrics
+        important_metrics = [
+            (0.8, 0.7, f"Net Profit: {report_data['net_pips']:+,.0f} pips", 20),
+            (0.8, 0.65, f"Win Rate: {report_data['win_rate']:.1f}%", 20)
+        ]
+        
+        for x, y, text, size in important_metrics:
+            plt.text(x, y, text,
+                    fontsize=size,
+                    fontweight='bold',
+                    color=accent_color,
+                    fontfamily='sans-serif',
+                    horizontalalignment='center',
+                    transform=ax.transAxes)
+
         # Save to buffer
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=120, bbox_inches='tight')
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
         buf.seek(0)
         plt.close()
         
-        logger.info("Minimalist report image generated")
+        logger.info("Professional report image generated")
         return buf
 
     except Exception as e:
@@ -165,7 +204,7 @@ def upload_file():
         
         # Generate and send image
         img_buffer = generate_report_image(report_data)
-        caption = "****** Kin99old_copytrading Report ******"
+        caption = "KIN99OLD COPYTRADING REPORT"
         send_telegram_photo(img_buffer, caption)
         
         return "✅ Report sent successfully", 200
